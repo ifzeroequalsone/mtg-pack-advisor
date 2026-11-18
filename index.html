@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MTG Pack Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&family=Space+Mono&display=swap">
+<style>
+/* ── Tokens ── */
+:root {
+  --bg:          #0b0d18;
+  --bg-card:     #13162b;
+  --bg-raised:   #1a1e38;
+  --bg-input:    #0f1222;
+  --border:      #252a48;
+  --border-hi:   #3a4070;
+  --fg:          #e6e2d8;
+  --fg-muted:    #7c82a8;
+  --fg-dim:      #4a5080;
+  --accent:      #c9a84c;
+  --accent-dim:  rgba(201,168,76,0.12);
+  --accent-glow: rgba(201,168,76,0.3);
+  --common:      #b0b8c8;
+  --uncommon:    #62b8d4;
+  --rare:        #d4a840;
+  --mythic:      #e8763c;
+  --good:        #52c48a;
+  --bad:         #e06060;
+  --radius:      10px;
+  --shadow:      0 4px 24px rgba(0,0,0,0.5);
+  color-scheme: dark;
+  --font-display: 'Cinzel', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+  --font-mono:    'Space Mono', monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f2efe8; --bg-card: #fff; --bg-raised: #faf8f2; --bg-input: #fff;
+    --border: #d8d2c0; --border-hi: #b8ae94; --fg: #1c1e30; --fg-muted: #686a88;
+    --fg-dim: #a0a4c0; --accent: #9a7030; --accent-dim: rgba(154,112,48,0.08);
+    --accent-glow: rgba(154,112,48,0.2); --rare: #a07820;
+    --shadow: 0 4px 24px rgba(0,0,0,0.12); color-scheme: light;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: var(--font-body);
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.6;
+  min-height: 100vh;
+  padding: 0 16px 64px;
+}
+
+/* ── Header ── */
+.site-header {
+  text-align: center;
+  padding: 52px 0 40px;
+  position: relative;
+}
+.site-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 100% at 50% 0%, var(--accent-glow), transparent 70%);
+  pointer-events: none;
+}
+.site-header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 48px var(--accent-glow);
+  position: relative;
+}
+.site-header p { color: var(--fg-muted); margin-top: 10px; font-size: 0.95rem; position: relative; }
+
+/* ── Input panel ── */
+.input-panel { max-width: 780px; margin: 0 auto 36px; }
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 26px;
+  box-shadow: var(--shadow);
+}
+.panel-label {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+textarea {
+  width: 100%;
+  min-height: 160px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.8;
+  padding: 13px 15px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+textarea:focus { border-color: var(--border-hi); }
+textarea::placeholder { color: var(--fg-dim); }
+
+.hint { font-size: 0.77rem; color: var(--fg-dim); margin-top: 8px; }
+.hint code { background: var(--bg-raised); padding: 1px 5px; border-radius: 3px; font-family: var(--font-mono); }
+
+.input-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.btn {
+  padding: 10px 24px; border-radius: 8px; font-size: 0.88rem; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.18s; font-family: var(--font-body);
+  letter-spacing: 0.02em;
+}
+.btn-primary { background: var(--accent); color: #111; }
+.btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-primary:active { transform: none; filter: none; }
+.btn-secondary { background: var(--bg-raised); color: var(--fg-muted); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--border-hi); color: var(--fg); }
+
+/* ── Progress ── */
+#statusArea { max-width: 780px; margin: 0 auto 24px; }
+.status-bar {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 20px;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.84rem; color: var(--fg-muted);
+}
+.spinner {
+  width: 16px; height: 16px; border: 2px solid var(--border-hi);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.7s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
+
+.banner {
+  padding: 12px 18px; border-radius: var(--radius);
+  font-size: 0.85rem; border-left: 3px solid;
+}
+.banner-warn { background: rgba(232,168,76,0.08); border-color: var(--accent); }
+.banner-err  { background: rgba(224,96,96,0.08);  border-color: var(--bad); }
+
+/* ── Results ── */
+.results-wrap { max-width: 1120px; margin: 0 auto; }
+.summary-strip { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 24px; }
+.stat-chip {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 24px; padding: 6px 16px; font-size: 0.82rem; color: var(--fg-muted);
+}
+.stat-chip strong { color: var(--fg); font-variant-numeric: tabular-nums; }
+
+.section-title {
+  font-family: var(--font-display); font-size: 0.78rem;
+  letter-spacing: 0.14em; color: var(--accent);
+  text-transform: uppercase; margin-bottom: 16px;
+}
+.packs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 16px; margin-bottom: 40px;
+}
+
+/* ── Pack card ── */
+.pack-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow); transition: border-color 0.2s, transform 0.2s;
+}
+.pack-card:hover { border-color: var(--border-hi); transform: translateY(-2px); }
+.pack-card.rank-1 { border-color: var(--accent); }
+.pack-card.rank-1 .pack-header { background: var(--accent-dim); }
+
+.pack-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); position: relative; }
+.pack-rank { position: absolute; top: 10px; right: 12px; font-family: var(--font-display); font-size: 0.65rem; letter-spacing: 0.1em; color: var(--accent); opacity: 0.75; }
+.pack-name { font-family: var(--font-display); font-size: 0.9rem; font-weight: 600; color: var(--fg); padding-right: 50px; margin-bottom: 4px; }
+.pack-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.pack-code { font-size: 0.7rem; color: var(--fg-dim); font-family: var(--font-mono); }
+.pack-year { font-size: 0.7rem; color: var(--fg-dim); }
+
+/* Per-set pack type tabs */
+.pack-type-switcher {
+  display: flex; border-bottom: 1px solid var(--border); overflow-x: auto;
+  scrollbar-width: none;
+}
+.pack-type-switcher::-webkit-scrollbar { display: none; }
+.pt-tab {
+  padding: 8px 14px; font-size: 0.74rem; font-weight: 600; cursor: pointer;
+  border: none; background: none; color: var(--fg-dim); white-space: nowrap;
+  font-family: var(--font-body); border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s; margin-bottom: -1px;
+}
+.pt-tab:hover { color: var(--fg-muted); }
+.pt-tab.active.pt-draft     { color: var(--common);   border-bottom-color: var(--common); }
+.pt-tab.active.pt-set       { color: var(--good);     border-bottom-color: var(--good); }
+.pt-tab.active.pt-play      { color: var(--good);     border-bottom-color: var(--good); }
+.pt-tab.active.pt-collector { color: var(--accent);   border-bottom-color: var(--accent); }
+
+.pack-ev {
+  display: flex; gap: 14px; padding: 10px 16px 12px;
+  flex-wrap: wrap; border-bottom: 1px solid var(--border);
+}
+.ev-label { font-size: 0.63rem; color: var(--fg-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+.ev-value { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--fg); line-height: 1.1; }
+.ev-unit  { font-size: 0.63rem; color: var(--fg-muted); font-weight: 400; margin-left: 1px; }
+
+/* Card rows */
+.pack-cards { padding: 10px 16px 14px; }
+.card-row {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.81rem;
+}
+.card-row:last-child { border-bottom: none; }
+.rarity-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.rarity-dot.C { background: var(--common); }
+.rarity-dot.U { background: var(--uncommon); }
+.rarity-dot.R { background: var(--rare); }
+.rarity-dot.M { background: var(--mythic); }
+.card-name { flex: 1; color: var(--fg); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-pct  { font-variant-numeric: tabular-nums; font-size: 0.77rem; color: var(--accent); font-weight: 600; min-width: 44px; text-align: right; }
+.card-packs{ font-variant-numeric: tabular-nums; font-size: 0.7rem;  color: var(--fg-dim);  min-width: 54px; text-align: right; }
+.rarity-badge { font-size: 0.58rem; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+.rarity-badge.C { background: rgba(176,184,200,0.15); color: var(--common); }
+.rarity-badge.U { background: rgba(98,184,212,0.15);  color: var(--uncommon); }
+.rarity-badge.R { background: rgba(212,168,64,0.15);  color: var(--rare); }
+.rarity-badge.M { background: rgba(232,118,60,0.15);  color: var(--mythic); }
+
+.expand-btn {
+  width: 100%; background: none; border: none; border-top: 1px solid var(--border);
+  color: var(--fg-dim); font-size: 0.72rem; padding: 7px; cursor: pointer;
+  font-family: var(--font-body); transition: color 0.15s, background 0.15s;
+}
+.expand-btn:hover { color: var(--fg-muted); background: var(--bg-raised); }
+
+.comp-note {
+  font-size: 0.7rem; color: var(--fg-dim); line-height: 1.6;
+  padding: 8px 16px 10px; border-top: 1px solid var(--border); background: var(--bg-raised);
+}
+.comp-note strong { color: var(--fg-muted); }
+
+.not-found-section { margin-bottom: 28px; }
+.not-found-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.not-found-chip {
+  background: rgba(224,96,96,0.08); border: 1px solid rgba(224,96,96,0.2);
+  border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; color: var(--bad);
+}
+
+.empty-state { max-width: 540px; margin: 48px auto; text-align: center; color: var(--fg-muted); font-size: 0.9rem; line-height: 1.8; }
+.empty-state .icon { font-size: 3.5rem; margin-bottom: 16px; opacity: 0.35; }
+.empty-state h3 { font-family: var(--font-display); font-size: 1.1rem; color: var(--fg); margin-bottom: 10px; }
+.format-example {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 20px; font-family: var(--font-mono); font-size: 0.8rem;
+  text-align: left; color: var(--fg-muted); margin: 18px auto; line-height: 1.9; max-width: 300px;
+}
+
+.legend-row { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.75rem; color: var(--fg-muted); align-items: center; margin-bottom: 10px; }
+.legend-row .lbl { color: var(--fg-dim); letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.66rem; }
+.footnote { font-size: 0.7rem; color: var(--fg-dim); line-height: 1.7; max-width: 900px; margin-bottom: 32px; }
+
+@media (max-width: 600px) {
+  .packs-grid { grid-template-columns: 1fr; }
+  body { padding: 0 12px 48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pack-card { transition: none; }
+  .spinner { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>MTG Pack Advisor</h1>
+  <p>Find the best booster packs to open for your wanted cards</p>
+</header>
+
+<div class="input-panel">
+  <div class="panel">
+    <div class="panel-label">Card Wishlist</div>
+    <textarea id="cardInput" placeholder="4 Lightning Bolt&#10;2 Snapcaster Mage&#10;1 Wrenn and Six&#10;Ragavan, Nimble Pilferer&#10;..."></textarea>
+    <div class="hint">One card per line · Quantities optional (<code>4x</code> or <code>4</code>) · Set/version doesn't matter · Double-faced cards: use front face name</div>
+    <div class="input-row">
+      <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">Analyze Packs</button>
+      <button class="btn btn-secondary" onclick="loadExample()">Load Example</button>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<div id="statusArea"></div>
+<div id="resultsArea">
+  <div class="empty-state">
+    <div class="icon">🃏</div>
+    <h3>Enter your card wishlist above</h3>
+    <p>Sets are ranked by expected desired cards per pack. Each set shows tabs for every pack type it had — Draft, Set Booster, Play Booster, or Collector — with accurate slot math per era.</p>
+    <div class="format-example">4 Lightning Bolt<br>2 Snapcaster Mage<br>1 Wrenn and Six<br>Ragavan, Nimble Pilferer</div>
+    <p>Data is fetched live from <a href="https://scryfall.com" target="_blank" style="color:var(--accent)">Scryfall</a>.</p>
+  </div>
+</div>
+
+<script>
+// ── Pack type definitions ─────────────────────────────────────────────────────
+//
+// "slots" = effective expected pulls per card per pack.
+// P(getting a specific card of rarity X) = slots[X] / count_of_X_in_set
+//
+// DRAFT BOOSTER: 10C + 3U + 1 rare-slot (87.5% R / 12.5% M)
+//
+// SET BOOSTER (ZNR Sep-2020 → LCI Nov-2023):
+//   6 C/U base + 1 R/M slot + 1 wildcard (50%C/25%U/15%R/10%M) + 1 foil (58%C/30%U/9%R/3%M)
+//   Effective: C=7.08, U=3.55, R=1.09, M=0.23
+//
+// PLAY BOOSTER (MKM Feb-2024+):
+//   6C + 3U + 1 R/M slot + 1 wildcard (52%C/28%U/15%R/5%M) + 1 foil (58%C/30%U/9%R/3%M)
+//   Effective: C=7.10, U=3.58, R=1.09, M=0.205
+//
+// COLLECTOR BOOSTER (ELD Oct-2019+, estimate, varies by set):
+//   Pre-2022:  ~3.3 R/M effective slots
+//   2022-2023: ~4.25 R/M effective slots
+//   2024+:     ~5.0 R/M effective slots
+
+const PACK_DEFS = {
+  draft:         { label: 'Draft',      tabCls: 'pt-draft',     slots: {C:10,    U:3,    R:7/8,    M:1/8   }, desc: '10C · 3U · 1 R/M (87.5%/12.5%)',                      approx: false },
+  set:           { label: 'Set Boost.', tabCls: 'pt-set',       slots: {C:7.08,  U:3.55, R:1.09,   M:0.23  }, desc: '6C · 3U · 1R/M + wildcard + foil (any rarity)',        approx: true  },
+  play:          { label: 'Play',       tabCls: 'pt-play',      slots: {C:7.10,  U:3.58, R:1.09,   M:0.205 }, desc: '6C · 3U · 1R/M + wildcard + foil (any rarity)',        approx: false },
+  collector_old: { label: 'Collector',  tabCls: 'pt-collector', slots: {C:2,     U:3,    R:2.5,    M:0.8   }, desc: '~15 premium cards, ~3.3 R/M slots (pre-2022 estimate)', approx: true  },
+  collector_mid: { label: 'Collector',  tabCls: 'pt-collector', slots: {C:2,     U:3,    R:3.25,   M:1.0   }, desc: '~15 premium cards, ~4.25 R/M slots (2022–23 estimate)', approx: true  },
+  collector_new: { label: 'Collector',  tabCls: 'pt-collector', slots: {C:2,     U:3,    R:3.75,   M:1.25  }, desc: '~15 premium cards, ~5.0 R/M slots (2024+ estimate)',   approx: true  },
+};
+
+const DATE_COLLECTOR = '2019-10-04'; // Throne of Eldraine
+const DATE_SET_BOOST = '2020-09-25'; // Zendikar Rising
+const DATE_PLAY      = '2024-02-09'; // Murders at Karlov Manor
+const DATE_COL_MID   = '2022-01-01';
+const DATE_COL_NEW   = '2024-02-01';
+
+// Sets that have 2× rare/mythic slots per pack
+const DOUBLE_RARE = new Set(['2xm','2x2','cmr','clb','bbd']);
+
+// Set types with traditional booster packs
+const BOOSTERABLE = new Set(['core','expansion','masters','draft_innovation']);
+
+function getPackTypes(setCode, releasedAt) {
+  const d = releasedAt || '1993-01-01';
+  const types = [];
+  if (d >= DATE_PLAY) {
+    types.push('play');
+  } else {
+    types.push('draft');
+    if (d >= DATE_SET_BOOST) types.push('set');
+  }
+  if (d >= DATE_COLLECTOR) {
+    types.push(d >= DATE_COL_NEW ? 'collector_new' : d >= DATE_COL_MID ? 'collector_mid' : 'collector_old');
+  }
+  return types;
+}
+
+function calcProb(rarity, count, setCode, ptId) {
+  if (!count) return 0;
+  const def = PACK_DEFS[ptId]; if (!def) return 0;
+  let s = { ...def.slots };
+  if (DOUBLE_RARE.has(setCode)) { s.R *= 2; s.M *= 2; }
+  const k = {common:'C', uncommon:'U', rare:'R', mythic:'M'}[rarity] || 'C';
+  return s[k] / count;
+}
+
+// ── Scryfall helpers ──────────────────────────────────────────────────────────
+const RATE_MS = 110; // ms between requests (~9 req/s, Scryfall limit is 10)
+let lastReq = 0;
+
+async function sfetch(url) {
+  const wait = RATE_MS - (Date.now() - lastReq);
+  if (wait > 0) await new Promise(r => setTimeout(r, wait));
+  lastReq = Date.now();
+  const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!r.ok) throw new Error(`${r.status} ${url}`);
+  return r.json();
+}
+
+async function getAllPages(url) {
+  let cards = [];
+  let next = url;
+  while (next) {
+    const d = await sfetch(next);
+    cards = cards.concat(d.data || []);
+    next = d.has_more ? d.next_page : null;
+  }
+  return cards;
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const rarityCounts = {};
+const setSelectedPack = {};
+let lastSetResults = [];
+let running = false;
+
+// ── Parse card list ───────────────────────────────────────────────────────────
+function parseList(text) {
+  const cards = []; const seen = new Set();
+  for (const raw of text.split('\n')) {
+    let line = raw.trim();
+    if (!line || line.startsWith('//') || line.startsWith('#')) continue;
+    const m = line.match(/^(?:(\d+)[xX]?\s+|[xX](\d+)\s+)?(.+)$/);
+    if (!m) continue;
+    const qty = parseInt(m[1] || m[2] || '1');
+    // Handle double-faced cards: take front face
+    let name = m[3].trim().split('//')[0].trim();
+    // Strip set/collector annotations
+    name = name.replace(/\s*\(.*\).*$/, '').trim();
+    if (!name || seen.has(name.toLowerCase())) continue;
+    seen.add(name.toLowerCase());
+    cards.push({ name, qty });
+  }
+  return cards;
+}
+
+// ── Main analysis ─────────────────────────────────────────────────────────────
+async function analyze() {
+  if (running) return;
+  const cards = parseList(document.getElementById('cardInput').value);
+  if (!cards.length) { showErr('No cards found in input.'); return; }
+
+  running = true;
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('resultsArea').innerHTML = '';
+  setProgress(0, `Looking up ${cards.length} card${cards.length > 1 ? 's' : ''}…`);
+
+  const notFound = [];
+  const setMap = {}; // code → {setName, setType, releasedAt, cards:[]}
+
+  for (let i = 0; i < cards.length; i++) {
+    const { name } = cards[i];
+    setProgress((i / cards.length) * 55, `Fetching: ${name} (${i+1}/${cards.length})`);
+    try {
+      const q = encodeURIComponent(`!"${name}" not:digital`);
+      const all = await getAllPages(`https://api.scryfall.com/cards/search?q=${q}&unique=prints&order=released`);
+      const prints = all.filter(c => BOOSTERABLE.has(c.set_type));
+      if (!prints.length) { notFound.push(name); continue; }
+      const seen = new Set();
+      for (const p of [...prints].reverse()) { // most recent printing per set first
+        if (seen.has(p.set)) continue; seen.add(p.set);
+        if (!setMap[p.set]) setMap[p.set] = { setName: p.set_name, setType: p.set_type, releasedAt: p.released_at, cards: [] };
+        setMap[p.set].cards.push({ name, rarity: p.rarity });
+      }
+    } catch (e) {
+      notFound.push(name);
+    }
+  }
+
+  const setCodes = Object.keys(setMap);
+  if (!setCodes.length) {
+    clearStatus(); showErr('No booster-legal printings found for any card in your list.'); running = false; document.getElementById('analyzeBtn').disabled = false; return;
+  }
+
+  for (let i = 0; i < setCodes.length; i++) {
+    const code = setCodes[i];
+    setProgress(55 + (i / setCodes.length) * 40, `Set sizes: ${setMap[code].setName} (${i+1}/${setCodes.length})`);
+    if (!rarityCounts[code]) {
+      rarityCounts[code] = { C:0, U:0, R:0, M:0 };
+      for (const [r, k] of [['c','C'],['u','U'],['r','R'],['m','M']]) {
+        try {
+          // -is:boosterfun excludes showcase/extended-art/borderless variants
+          // that don't occupy standard booster slots
+          const q = encodeURIComponent(`set:${code} rarity:${r} not:digital -is:boosterfun`);
+          const d = await sfetch(`https://api.scryfall.com/cards/search?q=${q}`);
+          rarityCounts[code][k] = d.total_cards || 0;
+        } catch {}
+      }
+    }
+  }
+
+  setProgress(97, 'Calculating…');
+
+  const results = [];
+  for (const [code, info] of Object.entries(setMap)) {
+    const counts = rarityCounts[code] || { C:0,U:0,R:0,M:0 };
+    const rMap = { common:'C', uncommon:'U', rare:'R', mythic:'M' };
+    const packTypes = getPackTypes(code, info.releasedAt);
+    const isDoubleRare = DOUBLE_RARE.has(code);
+
+    const packStats = {};
+    for (const pt of packTypes) {
+      let ev = 0;
+      const details = info.cards.map(card => {
+        const rKey = rMap[card.rarity] || 'C';
+        const count = counts[rKey] || 0;
+        const prob = calcProb(card.rarity, count, code, pt);
+        ev += prob;
+        return { ...card, rKey, prob, packsFor1: prob > 0 ? 1/prob : Infinity };
+      });
+      details.sort((a,b) => b.prob - a.prob);
+      const probAny = 1 - details.reduce((a,c) => a*(1-c.prob), 1);
+      packStats[pt] = { ev, probAny, details };
+    }
+
+    const bestEV = Math.max(...packTypes.map(pt => packStats[pt].ev));
+    // Default tab: highest EV pack type
+    let bestPt = packTypes[0];
+    for (const pt of packTypes) if (packStats[pt].ev >= packStats[bestPt].ev) bestPt = pt;
+    setSelectedPack[code] = bestPt;
+
+    results.push({ code, ...info, packTypes, packStats, isDoubleRare, counts, bestEV });
+  }
+
+  results.sort((a,b) => b.bestEV - a.bestEV);
+  lastSetResults = results;
+
+  setProgress(100, 'Done!');
+  await new Promise(r => setTimeout(r, 300));
+  clearStatus();
+  renderResults(results, notFound, cards.length);
+  running = false;
+  document.getElementById('analyzeBtn').disabled = false;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderResults(results, notFound, total) {
+  const area = document.getElementById('resultsArea');
+  const found = total - notFound.length;
+  let html = `<div class="results-wrap">
+    <div class="summary-strip">
+      <div class="stat-chip">Cards: <strong>${found} found</strong></div>
+      <div class="stat-chip">Sets: <strong>${results.length}</strong></div>
+      ${notFound.length ? `<div class="stat-chip">Not found: <strong style="color:var(--bad)">${notFound.length}</strong></div>` : ''}
+    </div>`;
+
+  if (notFound.length) {
+    html += `<div class="not-found-section"><div class="section-title">No booster-pack printings found</div>
+      <div class="not-found-list">${notFound.map(n=>`<span class="not-found-chip">${esc(n)}</span>`).join('')}</div></div>`;
+  }
+
+  html += `<div class="section-title">Recommended Packs — fewest packs needed to hit a wanted card (best pack type per set)</div>
+    <div class="packs-grid" id="packsGrid">`;
+
+  for (let i = 0; i < results.length; i++) html += renderCard(results[i], i);
+
+  html += `</div>
+    <div class="legend-row">
+      <span class="lbl">Rarity:</span>
+      <span><span class="rarity-badge C">C</span> Common</span>
+      <span><span class="rarity-badge U">U</span> Uncommon</span>
+      <span><span class="rarity-badge R">R</span> Rare</span>
+      <span><span class="rarity-badge M">M</span> Mythic</span>
+    </div>
+    <p class="footnote">
+      Set Booster and Collector Booster effective slot counts are approximations based on Wizards-published data.
+      Collector Booster rates vary by set — values are era-based estimates.
+      Double-rare sets (Double Masters, Battlebond, Commander Legends) apply 2× R/M slots.
+      Play Booster wildcard and foil slots use Wizards-published approximate distributions.
+      Data from <a href="https://scryfall.com" target="_blank" style="color:var(--accent)">Scryfall</a>.
+    </p>
+  </div>`;
+
+  area.innerHTML = html;
+}
+
+function renderCard(s, rank) {
+  const selPt = setSelectedPack[s.code] || s.packTypes[0];
+  const stats = s.packStats[selPt];
+  const def = PACK_DEFS[selPt];
+
+  let tabs = '';
+  for (const pt of s.packTypes) {
+    const active = pt === selPt ? ' active' : '';
+    tabs += `<button class="pt-tab ${PACK_DEFS[pt].tabCls}${active}" onclick="switchTab('${s.code}','${pt}')">${PACK_DEFS[pt].label}</button>`;
+  }
+
+  const compParts = [];
+  if (s.counts.C) compParts.push(`${s.counts.C}C`);
+  if (s.counts.U) compParts.push(`${s.counts.U}U`);
+  if (s.counts.R) compParts.push(`${s.counts.R}R`);
+  if (s.counts.M) compParts.push(`${s.counts.M}M`);
+  let note = `<strong>Set:</strong> ${compParts.join('/')} · <strong>Slots:</strong> ${esc(def.desc)}`;
+  if (s.isDoubleRare) note += ` · <strong style="color:var(--mythic)">2× rare/mythic slots</strong>`;
+  if (def.approx) note += ` · <em>approx.</em>`;
+
+  const SHOW = 5;
+  const details = stats.details;
+  const hidden = Math.max(0, details.length - SHOW);
+  let rows = details.slice(0, SHOW).map(renderRow).join('');
+  if (hidden > 0) {
+    rows += `<div id="more-${s.code}" style="display:none">${details.slice(SHOW).map(renderRow).join('')}</div>
+      <button class="expand-btn" id="expbtn-${s.code}" onclick="toggleMore('${s.code}',${hidden})">▸ Show ${hidden} more</button>`;
+  }
+
+  return `<div class="pack-card ${rank===0?'rank-1':''}" id="pack-${s.code}">
+    <div class="pack-header">
+      <div class="pack-rank">${rank===0?'★ BEST':'#'+(rank+1)}</div>
+      <div class="pack-name">${esc(s.setName)}</div>
+      <div class="pack-meta">
+        <span class="pack-code">${s.code.toUpperCase()}</span>
+        ${s.releasedAt ? `<span class="pack-year">${s.releasedAt.slice(0,4)}</span>` : ''}
+      </div>
+    </div>
+    <div class="pack-type-switcher" id="tabs-${s.code}">${tabs}</div>
+    ${renderEV(stats, s.cardDetails || details, s.code)}
+    <div class="pack-cards" id="cards-${s.code}">${rows}</div>
+    <div class="comp-note" id="note-${s.code}">${note}</div>
+  </div>`;
+}
+
+function renderEV(stats, details, code) {
+  const packsPerCard = stats.ev > 0 ? Math.ceil(1 / stats.ev) : '∞';
+  return `<div class="pack-ev" id="ev-${code}">
+    <div><div class="ev-label">Packs per wanted card</div>
+      <div class="ev-value">~${packsPerCard}</div></div>
+    <div><div class="ev-label">Chance ≥1 per pack</div>
+      <div class="ev-value">${(stats.probAny*100).toFixed(1)}<span class="ev-unit">%</span></div></div>
+    <div><div class="ev-label">Cards in set</div>
+      <div class="ev-value">${stats.details.length}</div></div>
+  </div>`;
+}
+
+function renderRow(c) {
+  const pct = (c.prob*100).toFixed(2);
+  const pks = c.packsFor1 === Infinity ? '∞' : c.packsFor1 < 10 ? `~${c.packsFor1.toFixed(1)}` : `~${Math.ceil(c.packsFor1)}`;
+  return `<div class="card-row">
+    <span class="rarity-dot ${c.rKey}"></span>
+    <span class="rarity-badge ${c.rKey}">${c.rKey}</span>
+    <span class="card-name">${esc(c.name)}</span>
+    <span class="card-pct">${pct}%</span>
+    <span class="card-packs">${pks} pks</span>
+  </div>`;
+}
+
+function switchTab(code, newPt) {
+  setSelectedPack[code] = newPt;
+  const s = lastSetResults.find(x => x.code === code); if (!s) return;
+  const stats = s.packStats[newPt];
+  const def = PACK_DEFS[newPt];
+
+  // Update tabs
+  document.querySelectorAll(`#tabs-${code} .pt-tab`).forEach(t => t.classList.remove('active'));
+  document.querySelectorAll(`#tabs-${code} .pt-tab`).forEach(t => {
+    if (t.textContent.trim() === def.label && t.classList.contains(def.tabCls)) t.classList.add('active');
+  });
+
+  // Update EV
+  document.getElementById(`ev-${code}`).outerHTML; // just replace
+  const evEl = document.getElementById(`ev-${code}`);
+  if (evEl) evEl.outerHTML = renderEV(stats, stats.details, code);
+
+  // Update rows
+  const SHOW = 5;
+  const hidden = Math.max(0, stats.details.length - SHOW);
+  let rows = stats.details.slice(0, SHOW).map(renderRow).join('');
+  if (hidden > 0) rows += `<div id="more-${code}" style="display:none">${stats.details.slice(SHOW).map(renderRow).join('')}</div>
+    <button class="expand-btn" id="expbtn-${code}" onclick="toggleMore('${code}',${hidden})">▸ Show ${hidden} more</button>`;
+  document.getElementById(`cards-${code}`).innerHTML = rows;
+
+  // Update note
+  const compParts = [];
+  if (s.counts.C) compParts.push(`${s.counts.C}C`);
+  if (s.counts.U) compParts.push(`${s.counts.U}U`);
+  if (s.counts.R) compParts.push(`${s.counts.R}R`);
+  if (s.counts.M) compParts.push(`${s.counts.M}M`);
+  let note = `<strong>Set:</strong> ${compParts.join('/')} · <strong>Slots:</strong> ${esc(def.desc)}`;
+  if (s.isDoubleRare) note += ` · <strong style="color:var(--mythic)">2× rare/mythic slots</strong>`;
+  if (def.approx) note += ` · <em>approx.</em>`;
+  document.getElementById(`note-${code}`).innerHTML = note;
+}
+
+function toggleMore(code, count) {
+  const el = document.getElementById(`more-${code}`);
+  const btn = document.getElementById(`expbtn-${code}`);
+  if (!el || !btn) return;
+  if (el.style.display === 'none') { el.style.display = ''; btn.textContent = '▾ Show fewer'; }
+  else { el.style.display = 'none'; btn.textContent = `▸ Show ${count} more`; }
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function setProgress(pct, msg) {
+  document.getElementById('statusArea').innerHTML = `<div class="status-bar">
+    <div class="spinner"></div>
+    <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(msg)}</span>
+    <div class="progress-wrap" style="min-width:80px"><div class="progress-fill" style="width:${pct}%"></div></div>
+  </div>`;
+}
+function clearStatus() { document.getElementById('statusArea').innerHTML = ''; }
+function showErr(msg) {
+  document.getElementById('statusArea').innerHTML = `<div class="banner banner-err">${esc(msg)}</div>`;
+}
+
+const EXAMPLE = `4 Lightning Bolt
+4 Snapcaster Mage
+4 Thoughtseize
+2 Liliana of the Veil
+2 Wrenn and Six
+4 Ragavan, Nimble Pilferer
+2 Blood Moon`;
+
+function loadExample() { document.getElementById('cardInput').value = EXAMPLE; }
+function clearAll() {
+  if (running) return;
+  document.getElementById('cardInput').value = '';
+  clearStatus();
+  document.getElementById('resultsArea').innerHTML = `<div class="empty-state">
+    <div class="icon">🃏</div>
+    <h3>Enter your card wishlist above</h3>
+    <p>Sets are ranked by expected desired cards per pack. Each set shows tabs for every pack type it had, with accurate slot math per era.</p>
+    <div class="format-example">4 Lightning Bolt<br>2 Snapcaster Mage<br>1 Wrenn and Six<br>Ragavan, Nimble Pilferer</div>
+  </div>`;
+}
+</script>
+</body>
+</html>

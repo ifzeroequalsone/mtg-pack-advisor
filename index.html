@@ -419,6 +419,12 @@ let lastSetResults = [];
 let running = false;
 
 // ── Parse card list ───────────────────────────────────────────────────────────
+const BASIC_LANDS = new Set([
+  'plains','island','swamp','mountain','forest',
+  'snow-covered plains','snow-covered island','snow-covered swamp',
+  'snow-covered mountain','snow-covered forest','wastes',
+]);
+
 function parseList(text) {
   const cards = []; const seen = new Set();
   for (const raw of text.split('\n')) {
@@ -432,6 +438,7 @@ function parseList(text) {
     // Strip set/collector annotations
     name = name.replace(/\s*\(.*\).*$/, '').trim();
     if (!name || seen.has(name.toLowerCase())) continue;
+    if (BASIC_LANDS.has(name.toLowerCase())) continue;
     seen.add(name.toLowerCase());
     cards.push({ name, qty });
   }

@@ -378,14 +378,20 @@ function calcProb(rarity, count, setCode, ptId) {
 }
 
 // ── Scryfall helpers ──────────────────────────────────────────────────────────
-const RATE_MS = 110; // ms between requests (~9 req/s, Scryfall limit is 10)
+const RATE_MS = 120;
 let lastReq = 0;
 
-async function sfetch(url) {
+async function sfetch(url, retries = 4) {
   const wait = RATE_MS - (Date.now() - lastReq);
   if (wait > 0) await new Promise(r => setTimeout(r, wait));
   lastReq = Date.now();
   const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (r.status === 429) {
+    if (retries <= 0) throw new Error('429 rate limited');
+    const delay = 1000 * (5 - retries); // 1s, 2s, 3s, 4s
+    await new Promise(r => setTimeout(r, delay));
+    return sfetch(url, retries - 1);
+  }
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   return r.json();
 }
@@ -394,7 +400,12 @@ async function getAllPages(url) {
   let cards = [];
   let next = url;
   while (next) {
-    const d = await sfetch(next);
+    let d;
+    try { d = await sfetch(next); } catch (e) {
+      // 404 = no results (normal for cards not in any booster set)
+      if (e.message.startsWith('404')) return cards;
+      throw e;
+    }
     cards = cards.concat(d.data || []);
     next = d.has_more ? d.next_page : null;
   }

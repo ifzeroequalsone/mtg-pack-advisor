@@ -1,0 +1,282 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Italian Card Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f7f4ef;
+  --bg2: #edeae3;
+  --fg: #1a1810;
+  --fg2: #6b6558;
+  --fg3: #9b9080;
+  --border: #d8d2c6;
+  --card-bg: #ffffff;
+  --shadow: 0 2px 12px rgba(0,0,0,0.10);
+  --shadow-hover: 0 8px 32px rgba(0,0,0,0.18);
+  --accent: #7a4f28;
+  --accent2: #c4873a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12100d; --bg2: #1c1a16; --fg: #ede8df; --fg2: #9b9080;
+    --fg3: #6b6558; --border: #2e2b24; --card-bg: #1c1a16;
+    --shadow: 0 2px 16px rgba(0,0,0,0.5); --shadow-hover: 0 8px 36px rgba(0,0,0,0.7);
+    --accent: #c4873a; --accent2: #e8b06a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12100d; --bg2: #1c1a16; --fg: #ede8df; --fg2: #9b9080;
+  --fg3: #6b6558; --border: #2e2b24; --card-bg: #1c1a16;
+  --shadow: 0 2px 16px rgba(0,0,0,0.5); --shadow-hover: 0 8px 36px rgba(0,0,0,0.7);
+  --accent: #c4873a; --accent2: #e8b06a; color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  min-height: 100%;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+header h1 {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: clamp(1.5rem, 4vw, 2.4rem);
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+header p {
+  font-size: 0.85rem;
+  color: var(--fg2);
+}
+.count-badge {
+  display: inline-block;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 0.75rem;
+  color: var(--fg2);
+  margin-top: 10px;
+}
+
+.search-row {
+  display: flex; justify-content: center; gap: 10px; margin-bottom: 32px; flex-wrap: wrap;
+}
+#searchBox {
+  width: min(400px, 100%);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  padding: 9px 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+#searchBox:focus { border-color: var(--accent2); }
+#searchBox::placeholder { color: var(--fg3); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+.card img {
+  width: 100%;
+  display: block;
+  border-radius: 10px 10px 0 0;
+  aspect-ratio: 488/680;
+  object-fit: cover;
+  background: var(--bg2);
+}
+.card-info {
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--border);
+}
+.card-italian {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.3;
+  margin-bottom: 3px;
+  text-wrap: balance;
+}
+.card-english {
+  font-size: 0.68rem;
+  color: var(--fg3);
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.no-results {
+  text-align: center;
+  color: var(--fg2);
+  font-size: 0.9rem;
+  padding: 60px 0;
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 480px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .card-italian { font-size: 0.68rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: none; }
+}
+</style>
+
+<header>
+  <h1>Carte Italiane</h1>
+  <p>Commander deck · edizioni italiane</p>
+  <div class="count-badge" id="countBadge">87 carte</div>
+</header>
+
+<div class="search-row">
+  <input type="search" id="searchBox" placeholder="Cerca per nome…" oninput="filterCards()">
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const CARDS = [
+  {e:'Arid Archway',i:'Arco Arido',u:'https://cards.scryfall.io/normal/front/7/e/7e4fed3c-2846-42ca-99ea-d960e6335ee0.jpg?1782796279'},
+  {e:"Artist's Talent",i:"Talento dell'Artista",u:'https://cards.scryfall.io/normal/front/7/c/7c7d03c2-67e5-4af9-b2e0-bb0c734184f2.jpg?1782789434'},
+  {e:'Ash Barrens',i:'Distese di Polvere',u:'https://cards.scryfall.io/normal/front/a/2/a2bf0114-d6ad-4bff-8933-d4b09bf5d4de.jpg?1782769096'},
+  {e:'Avenger of Zendikar',i:'Vendicatore di Zendikar',u:'https://cards.scryfall.io/normal/front/1/4/14545ff2-c8bf-4f85-b5b0-8669c876bd14.jpg?1794280829'},
+  {e:"Ayula's Influence",i:"Influenza di Ayula",u:'https://cards.scryfall.io/normal/front/3/e/3e03b60e-bb4d-4df3-b6b0-e8f3e4b8e35f.jpg?1782919150'},
+  {e:'Bala Ged Recovery',i:'Bala Ged Recovery // Bala Ged Sanctuary',u:'https://cards.scryfall.io/normal/front/5/d/5d2195f1-b7b2-4ded-ac5c-f1c502150e45.jpg?1782900046'},
+  {e:'Beast Within',i:'Bestia Interiore',u:'https://cards.scryfall.io/normal/front/c/9/c968570e-ddde-463c-9704-ea3ad3b1924c.jpg?1794275048'},
+  {e:'Bitter Reunion',i:'Ricongiungimento Rancoroso',u:'https://cards.scryfall.io/normal/front/9/c/9cc64ecf-b141-45eb-9a1f-8e00c8f892db.jpg?1782840278'},
+  {e:'Boseiju, Who Endures',i:'Boseiju, Che Persiste',u:'https://cards.scryfall.io/normal/front/8/7/8723d315-ad3c-4421-9759-b3129ea4cd95.jpg?1782860122'},
+  {e:'Bridgeworks Battle',i:'Bridgeworks Battle // Tanglespan Bridgeworks',u:'https://cards.scryfall.io/normal/front/a/7/a76e3909-b2d9-4c0d-8027-aac3500063ba.jpg?1782792757'},
+  {e:'Chaos Warp',i:'Distorsione Caotica',u:'https://cards.scryfall.io/normal/front/9/7/9796cd20-9e3b-4649-9e41-9f03f0b991d5.jpg?1785263655'},
+  {e:'Chocobo Racetrack',i:'Circuito dei Chocobo',u:'https://cards.scryfall.io/normal/front/7/0/70ebf63e-bc84-4e1d-a428-61973cd81628.jpg?1782771905'},
+  {e:'Chord of Calling',i:'Corda della Convocazione',u:'https://cards.scryfall.io/normal/front/6/3/63e05ff5-dace-4252-a855-5bafa6ffffbf.jpg?1782804778'},
+  {e:'Cinder Glade',i:'Radura delle Braci',u:'https://cards.scryfall.io/normal/front/9/1/912d6e51-6bf4-4147-b435-91cf639dc03b.jpg?1785266298'},
+  {e:'Cleveland Booker, Empath',i:'Cleveland Booker, Empatico',u:'https://cards.scryfall.io/normal/front/d/7/d7a3f72d-438e-4239-aabc-ee56a2a1a69c.jpg?1794260956'},
+  {e:'Command Tower',i:'Torre di Comando',u:'https://cards.scryfall.io/normal/front/9/4/94436ea3-bcd9-4bfe-a1bd-d5c26cda000b.jpg?1794276796'},
+  {e:'Commercial District',i:'Distretto Commerciale',u:'https://cards.scryfall.io/normal/front/0/7/0792dd81-0d8a-4139-890c-6ab0837c81ab.jpg?1782801309'},
+  {e:'Cool but Rude',i:'Rude Ninja',u:'https://cards.scryfall.io/normal/front/1/6/16e19492-a470-42d1-bb77-faf4d74c6d3d.jpg?1782760924'},
+  {e:'Cragcrown Pathway',i:'Cragcrown Pathway // Timbercrown Pathway',u:'https://cards.scryfall.io/normal/front/e/6/e6d41b52-ad9e-4f3a-93f1-846e0cf34ebb.jpg?1782899334'},
+  {e:'Dancing from Dark to Dawn',i:"Danzare fino all'Alba",u:'https://cards.scryfall.io/normal/front/b/b/bb3bf1cf-ffc8-44de-9ada-2e8dabf154f5.jpg?1786557392'},
+  {e:'Demand Answers',i:'Pretendere Risposte',u:'https://cards.scryfall.io/normal/front/2/a/2a502fd6-24c6-4506-8347-82d35cb7ae9d.jpg?1782802414'},
+  {e:'Eusocial Engineering',i:'Ingegneria Eusociale',u:'https://cards.scryfall.io/normal/front/2/5/258222d5-86b6-4290-97f6-699039b3ce5f.jpg?1782767254'},
+  {e:'Faithless Looting',i:'Saccheggio degli Infedeli',u:'https://cards.scryfall.io/normal/front/f/a/fa6eaa3f-2170-4427-9ac6-d819e219d29c.jpg?1782759129'},
+  {e:'Faldorn, Dread Wolf Herald',i:'Faldorn, Messaggera dei Necrolupi',u:'https://cards.scryfall.io/normal/front/8/7/8746d90e-29a3-49ae-b094-33bfa9c39c67.jpg?1782850012'},
+  {e:'Field of the Dead',i:'Campo dei Morti',u:'https://cards.scryfall.io/normal/front/2/5/25eef880-d01d-45d9-98e8-3ed1359d0286.jpg?1792431480'},
+  {e:'Finale of Devastation',i:'Finale di Devastazione',u:'https://cards.scryfall.io/normal/front/3/7/375ea419-6480-4390-9924-2b81e268f588.jpg?1782921196'},
+  {e:'Forgotten Cave',i:'Caverna Dimenticata',u:'https://cards.scryfall.io/normal/front/1/f/1f6a1a1d-ed19-494d-bafa-4ad1759d9369.jpg?1782778610'},
+  {e:'Formidable Speaker',i:'Oratore Formidabile',u:'https://cards.scryfall.io/normal/front/a/4/a420f1fd-9dfe-42ba-a145-0e57e1d29d60.jpg?1791676390'},
+  {e:'Geier Reach Sanitarium',i:'Manicomio delle Alture Geier',u:'https://cards.scryfall.io/normal/front/8/5/85572fbb-c060-4a57-a618-879850624767.jpg?1782809429'},
+  {e:'Genesis Device',i:'Dispositivo Genesi',u:'https://cards.scryfall.io/normal/front/7/d/7d645ca9-6d85-4dbc-bd13-86da1d529692.jpg?1794260316'},
+  {e:'Ghost Town',i:'Città Fantasma',u:'https://cards.scryfall.io/normal/front/d/2/d29b6489-1981-463e-a8a7-aca157f18123.jpg?1783050340'},
+  {e:'Glint-Horn Buccaneer',i:'Bucaniere Cornolucente',u:'https://cards.scryfall.io/normal/front/9/8/9831b050-195d-4fb2-89c0-fc76d5cba5c5.jpg?1782834855'},
+  {e:"Green Sun's Zenith",i:'Zenit del Sole Verde',u:'https://cards.scryfall.io/normal/front/5/d/5d2195f1-b7b2-4ded-ac5c-f1c502150e45.jpg?1782993308'},
+  {e:'Grove of the Burnwillows',i:'Boschetto dei Salici Ardenti',u:'https://cards.scryfall.io/normal/front/2/0/204cf23f-dec6-4223-8594-4d3591bdef08.jpg?1782901593'},
+  {e:'Gruul Turf',i:'Torba Gruul',u:'https://cards.scryfall.io/normal/front/c/0/c020a7ab-b435-40c6-a2f6-58c2bbc2e677.jpg?1794282456'},
+  {e:'Guildless Commons',i:'Ritrovo dei Senza Gilda',u:'https://cards.scryfall.io/normal/front/2/0/2001499f-67bb-4b01-899b-23f84d8a7cf3.jpg?1782896754'},
+  {e:'Horizon Explorer',i:"Esploratore dell'Orizzonte",u:'https://cards.scryfall.io/normal/front/0/0/009ff7aa-0bdb-41f0-a022-2fcf412415d7.jpg?1782768743'},
+  {e:'Inti, Seneschal of the Sun',i:'Inti, Siniscalco del Sole',u:'https://cards.scryfall.io/normal/front/e/7/e7e0419b-1ff4-4a75-be00-4cc51ab65134.jpg?1782808220'},
+  {e:'Invasion of Mercadia',i:'Invasion of Mercadia // Kyren Flamewright',u:'https://cards.scryfall.io/normal/front/2/4/240c8546-d647-4ba2-9e37-f95b0db03e5b.jpg?1782824837'},
+  {e:'Ivora, Insatiable Heir',i:'Ivora, Erede Insaziabile',u:'https://cards.scryfall.io/normal/front/5/3/538747eb-fabe-47fb-acff-2b901318062f.jpg?1782781585'},
+  {e:'Karplusan Forest',i:'Foresta di Karplus',u:'https://cards.scryfall.io/normal/front/1/7/17e36757-24d2-4395-bee9-b0969b7af645.jpg?1782768131'},
+  {e:"Kenrith's Transformation",i:'Trasformazione di Kenrith',u:'https://cards.scryfall.io/normal/front/9/0/906c3077-290a-47b2-8c76-0209d84b2ee4.jpg?1782812460'},
+  {e:'Kickoff Celebrations',i:'Festeggiamenti Iniziali',u:'https://cards.scryfall.io/normal/front/1/2/123d4062-a241-470d-8c23-baf93efc6f95.jpg?1782777992'},
+  {e:'Koth, the Geomancer',i:'Koth, il Geomante',u:'https://cards.scryfall.io/normal/front/f/5/f5265c35-dbe4-4488-8919-29f6769bfcfc.jpg?1790687955'},
+  {e:'Magmakin Artillerist',i:'Artigliere Magmante',u:'https://cards.scryfall.io/normal/front/2/4/24acf97c-9df1-49bf-a81e-b73de9b2b3df.jpg?1782777983'},
+  {e:'Magmatic Insight',i:'Visione di Magma',u:'https://cards.scryfall.io/normal/front/f/f/ff627e42-a5ab-4c7f-9f16-b923ee7268ca.jpg?1782960379'},
+  {e:'Molten Vortex',i:'Vortice Incandescente',u:'https://cards.scryfall.io/normal/front/e/6/e6622925-e6f7-47bb-b11a-726fe0b14a67.jpg?1782960370'},
+  {e:'Monument to Endurance',i:'Monumento alla Resistenza',u:'https://cards.scryfall.io/normal/front/8/6/86d38a8b-9b5d-4de3-9fea-79106ff21fd6.jpg?1782777550'},
+  {e:"Omnath, Locus of Rage",i:"Omnath, l'Iralocus",u:'https://cards.scryfall.io/normal/front/c/a/caa1f4e3-1df7-48c3-a929-2f79a82d138b.jpg?1794281773'},
+  {e:'Pia, Aether Ascetic',i:"Pia, Ascetica dell'Etere",u:'https://cards.scryfall.io/normal/front/4/a/4a1b7cd0-b9c0-4294-bcf6-7a39c7a3f27b.jpg?1790688401'},
+  {e:'Possessed Portal',i:'Portale Posseduto',u:'https://cards.scryfall.io/normal/front/8/5/85d25f60-95bf-4a24-ba27-56c68f7211b1.jpg?1783024701'},
+  {e:'Prophetic Ravings',i:'Delirio Profetico',u:'https://cards.scryfall.io/normal/front/0/9/095aa969-8838-458c-a6fc-4cda0dd4097d.jpg?1782950377'},
+  {e:'Rampaging Baloths',i:'Baloth Infuriati',u:'https://cards.scryfall.io/normal/front/1/3/13022486-a6db-4366-ae35-6389b4942107.jpg?1782768391'},
+  {e:'Reliquary Tower',i:'Torre del Reliquiario',u:'https://cards.scryfall.io/normal/front/3/5/3584a8cb-8578-4581-8471-8de06ebff1d4.jpg?1794277738'},
+  {e:'Rockfall Vale',i:'Valle delle Frane',u:'https://cards.scryfall.io/normal/front/c/c/cc7af1aa-1c80-4b1b-96c5-792bbf59d981.jpg?1790686199'},
+  {e:'Rootbound Crag',i:'Dirupo delle Radici',u:'https://cards.scryfall.io/normal/front/f/3/f3d087d5-e3fb-447b-9488-25401e247a6a.jpg?1785267530'},
+  {e:'Rydia, Summoner of Mist',i:'Rydia, Invocatrice delle Nebbie',u:'https://cards.scryfall.io/normal/front/4/f/4f0514fc-973b-47e1-a9cd-0dfb64a9fb79.jpg?1782771656'},
+  {e:'Sabotender',i:'Sabotender',u:'https://cards.scryfall.io/normal/front/9/b/9b322a72-1a69-4a35-84b8-dca25e0b409c.jpg?1782772001'},
+  {e:'Sapling Nursery',i:'Vivaio di Alberelli',u:'https://cards.scryfall.io/normal/front/7/5/75a932a2-2d6d-4e14-9449-0c348788590b.jpg?1791676785'},
+  {e:"Sazacap's Brew",i:'Infuso di Sazacap',u:'https://cards.scryfall.io/normal/front/2/4/24b6a857-182f-4096-890b-7c62e7133855.jpg?1782789318'},
+  {e:'Scapeshift',i:'Morforama',u:'https://cards.scryfall.io/normal/front/2/6/26f2ac22-83cb-40b4-ad18-3597d49195be.jpg?1792431767'},
+  {e:'Scute Swarm',i:'Sciame di Scudati',u:'https://cards.scryfall.io/normal/front/3/4/343f5a59-41df-4ab7-8f7b-ae733d2eb309.jpg?1794275290'},
+  {e:'Seismic Assault',i:'Assalto Sismico',u:'https://cards.scryfall.io/normal/front/1/c/1c07ddb0-1c04-4fa2-86fd-292c095c4d1a.jpg?1783010540'},
+  {e:'Sheltered Thicket',i:'Boschetto Riparato',u:'https://cards.scryfall.io/normal/front/7/5/753a4ccc-dab0-4887-aa57-ed9f03d009cf.jpg?1794282905'},
+  {e:'Six',i:'Sei',u:'https://cards.scryfall.io/normal/front/5/5/55f5e3e8-0a30-417f-aa89-b7c76556eb3f.jpg?1782793275'},
+  {e:'Sokenzan, Crucible of Defiance',i:'Sokenzan, Crogiolo della Ribellione',u:'https://cards.scryfall.io/normal/front/f/d/fd2dbca1-9b5a-41fa-a8df-195792620029.jpg?1782861049'},
+  {e:'Sol Ring',i:'Anello Solare',u:'https://cards.scryfall.io/normal/front/f/5/f58a4ae2-e25c-421f-ba63-ec8df8e8b3d4.jpg?1794275997'},
+  {e:'Spire Garden',i:'Giardino delle Guglie',u:'https://cards.scryfall.io/normal/front/e/9/e90607c2-b0d9-4066-b4f4-75c3cefbb4a6.jpg?1782851136'},
+  {e:'Springheart Nantuko',i:'Nantuko della Primavera',u:'https://cards.scryfall.io/normal/front/6/6/66e2e840-c01f-42d5-b41a-a6d06de38691.jpg?1782793261'},
+  {e:'Stomping Ground',i:'Terreno Calpestabile',u:'https://cards.scryfall.io/normal/front/e/9/e99f03a3-0201-4459-8604-b64cef788cad.jpg?1794262792'},
+  {e:'Storm Cauldron',i:'Storm Cauldron',u:'https://cards.scryfall.io/normal/front/4/e/4e9e9447-73fa-40c3-bfa9-4af71e80fa82.jpg?1783036428'},
+  {e:'Stump Stomp',i:'Stump Stomp // Burnwillow Clearing',u:'https://cards.scryfall.io/normal/front/0/1/01f0e76a-bcd7-4871-afa3-864e5a761bf7.jpg?1782792643'},
+  {e:'Taiga',i:'Taiga',u:'https://cards.scryfall.io/normal/front/9/4/9415feea-d723-42c5-8ab3-555c0ae50d3c.jpg?1783062758'},
+  {e:'Tannuk, Memorial Ensign',i:'Tannuk, Emblema della Memoria',u:'https://cards.scryfall.io/normal/front/2/5/25dba7fe-8556-4d71-bc1d-b2c7957d6867.jpg?1782767029'},
+  {e:'Tectonic Reformation',i:'Riforma Tettonica',u:'https://cards.scryfall.io/normal/front/7/1/7166d534-c426-4693-9d8e-34d7fa0875ff.jpg?1782909235'},
+  {e:'Test of Identity',i:"Prova d'Identità",u:'https://cards.scryfall.io/normal/front/6/f/6f1fa691-f8a5-4d42-a748-39d9d4c0aaf1.jpg?1794259754'},
+  {e:'The Celestus',i:'Il Celestus',u:'https://cards.scryfall.io/normal/front/6/9/695c7aca-3f47-4f18-b1e0-c1fb04de402c.jpg?1782870748'},
+  {e:'The Echoverse Fulcrum',i:"Il Fulcro dell'Ecoverso",u:'https://cards.scryfall.io/normal/front/8/d/8d6889e6-4c4e-43bc-a54f-7013d8ff732d.jpg?1790685751'},
+  {e:'Thornspire Verge',i:'Confine del Montespinato',u:'https://cards.scryfall.io/normal/front/c/9/c9746df3-02ce-4d93-9c87-46441cca340c.jpg?1782784369'},
+  {e:'Thrill of Possibility',i:'Brivido della Possibilità',u:'https://cards.scryfall.io/normal/front/4/1/419dcedd-a505-4c93-a17b-d6a0855a5166.jpg?1794274961'},
+  {e:'Tormenting Voice',i:'Voce Torturante',u:'https://cards.scryfall.io/normal/front/3/a/3ab57510-c0cb-46ed-96b5-45e57530f1ff.jpg?1782834465'},
+  {e:'Tranquil Thicket',i:'Boschetto Tranquillo',u:'https://cards.scryfall.io/normal/front/0/2/02e256c2-a2e3-4145-a04b-73dda0f82c38.jpg?1782785867'},
+  {e:'Valakut, the Molten Pinnacle',i:'Valakut, il Pinnacolo Fuso',u:'https://cards.scryfall.io/normal/front/b/a/ba4fe7ec-5e9d-460b-94fe-c7f7f2d92575.jpg?1782763787'},
+  {e:'Vision of Love',i:"Visione d'Amore",u:'https://cards.scryfall.io/normal/front/d/7/d711d6e9-0a1e-4c01-8ce7-2082913402a9.jpg?1785270132'},
+  {e:"Witch's Mark",i:'Marchio della Strega',u:'https://cards.scryfall.io/normal/front/6/a/6add79ee-2ca2-46ce-95ca-bc504ed39b73.jpg?1782813851'},
+  {e:'Yavimaya, Cradle of Growth',i:'Yavimaya, Culla della Crescita',u:'https://cards.scryfall.io/normal/front/a/5/a58663ef-5172-4d2c-9269-fdf395853bdd.jpg?1782880376'},
+  {e:"Zendikar's Roil",i:'Torbido di Zendikar',u:'https://cards.scryfall.io/normal/front/d/3/d30afe9d-8672-492e-a4cb-855a9b4a5b47.jpg?1782833824'}
+];
+
+function render(list) {
+  const grid = document.getElementById('grid');
+  document.getElementById('countBadge').textContent = list.length + ' carte';
+  if (!list.length) {
+    grid.innerHTML = '<div class="no-results">Nessuna carta trovata.</div>';
+    return;
+  }
+  grid.innerHTML = list.map(c => `
+    <div class="card">
+      <img src="${c.u}" alt="${c.i}" loading="lazy">
+      <div class="card-info">
+        <div class="card-italian">${c.i}</div>
+        <div class="card-english">${c.e}</div>
+      </div>
+    </div>`).join('');
+}
+
+function filterCards() {
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  render(q ? CARDS.filter(c => c.i.toLowerCase().includes(q) || c.e.toLowerCase().includes(q)) : CARDS);
+}
+
+render(CARDS);
+</script>

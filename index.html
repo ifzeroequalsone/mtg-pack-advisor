@@ -456,7 +456,8 @@ async function analyze() {
   document.getElementById('resultsArea').innerHTML = '';
   setProgress(0, `Looking up ${cards.length} card${cards.length > 1 ? 's' : ''}…`);
 
-  const notFound = [];
+  const notFound = []; // {name, reason}
+  const today = new Date().toISOString().slice(0, 10);
   const setMap = {}; // code → {setName, setType, releasedAt, cards:[]}
 
   for (let i = 0; i < cards.length; i++) {
@@ -465,8 +466,20 @@ async function analyze() {
     try {
       const q = encodeURIComponent(`!"${name}" not:digital`);
       const all = await getAllPages(`https://api.scryfall.com/cards/search?q=${q}&unique=prints&order=released`);
-      const prints = all.filter(c => BOOSTERABLE.has(c.set_type));
-      if (!prints.length) { notFound.push(name); continue; }
+      // Only released sets with booster packs
+      const prints = all.filter(c => BOOSTERABLE.has(c.set_type) && c.released_at <= today);
+      if (!prints.length) {
+        // Categorize why
+        const setTypes = [...new Set(all.map(c => c.set_type))];
+        let reason = 'No booster-pack printing';
+        if (!all.length) reason = 'Not found on Scryfall';
+        else if (all.every(c => c.released_at > today)) reason = 'Not yet released';
+        else if (setTypes.includes('memorabilia')) reason = 'Secret Lair / promo only';
+        else if (setTypes.every(t => t === 'commander')) reason = 'Commander deck only';
+        else if (setTypes.every(t => ['commander','funny','promo','memorabilia','token'].includes(t))) reason = 'No standard booster printing';
+        notFound.push({ name, reason });
+        continue;
+      }
       const seen = new Set();
       for (const p of [...prints].reverse()) { // most recent printing per set first
         if (seen.has(p.set)) continue; seen.add(p.set);
@@ -474,7 +487,7 @@ async function analyze() {
         setMap[p.set].cards.push({ name, rarity: p.rarity });
       }
     } catch (e) {
-      notFound.push(name);
+      notFound.push({ name, reason: 'Lookup failed' });
     }
   }
 
@@ -552,12 +565,19 @@ function renderResults(results, notFound, total) {
     <div class="summary-strip">
       <div class="stat-chip">Cards: <strong>${found} found</strong></div>
       <div class="stat-chip">Sets: <strong>${results.length}</strong></div>
-      ${notFound.length ? `<div class="stat-chip">Not found: <strong style="color:var(--bad)">${notFound.length}</strong></div>` : ''}
+      ${notFound.length ? `<div class="stat-chip">Skipped: <strong style="color:var(--bad)">${notFound.length}</strong></div>` : ''}
     </div>`;
 
   if (notFound.length) {
-    html += `<div class="not-found-section"><div class="section-title">No booster-pack printings found</div>
-      <div class="not-found-list">${notFound.map(n=>`<span class="not-found-chip">${esc(n)}</span>`).join('')}</div></div>`;
+    // Group by reason
+    const byReason = {};
+    for (const {name, reason} of notFound) (byReason[reason] = byReason[reason] || []).push(name);
+    html += `<div class="not-found-section"><div class="section-title">No buyable booster-pack printing</div>`;
+    for (const [reason, names] of Object.entries(byReason)) {
+      html += `<div style="margin-bottom:10px"><div style="font-size:0.72rem;color:var(--fg-dim);letter-spacing:0.06em;margin-bottom:6px">${esc(reason)}</div>
+        <div class="not-found-list">${names.map(n=>`<span class="not-found-chip">${esc(n)}</span>`).join('')}</div></div>`;
+    }
+    html += `</div>`;
   }
 
   html += `<div class="section-title">Recommended Packs — fewest packs needed to hit a wanted card (best pack type per set)</div>
